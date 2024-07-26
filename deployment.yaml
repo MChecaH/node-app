@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-mainapp
+  namespace: node-app
+  labels:
+    app: nodeapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nodeapp
+  template:
+    metadata:
+      labels:
+        app: nodeapp
+    spec:
+      containers:
+        - name: node-app
+          image: mchecah/node-app:latest
+          ports:
+            - containerPort: 3000
+        - name: node-app-login
+          image: mchecah/node-app-login:latest
+          ports:
+            - containerPort: 3001
