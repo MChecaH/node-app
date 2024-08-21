@@ -6,15 +6,15 @@ metadata:
 spec:
   selector:
     app: nodeapp
-  type: LoadBalancer
+  type: NodePort
   ports:
-    - protocol: TCP
-      name: login
+    - name: login
+      protocol: TCP
       port: 3001
       targetPort: 3001
-      nodePort: 3001
-    - protocol: TCP
-      name: mainapp
+      nodePort: 30001
+    - name: mainapp
+      protocol: TCP
       port: 3000
       targetPort: 3000
-      nodePort: 3000
+      nodePort: 30000
