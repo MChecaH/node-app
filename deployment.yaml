@@ -14,6 +14,9 @@ spec:
     metadata:
       labels:
         app: nodeapp
+      annotations:
+        sidecar.opentelemetry.io/inject: "true"
+        instrumentation.opentelemetry.io/inject-nodejs: "true"
     spec:
       containers:
         - name: node-app
