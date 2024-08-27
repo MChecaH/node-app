@@ -20,6 +20,8 @@ The OpenTelemetry Collector offers a vendor-agnostic agent that receives, proces
 
 ## Deployment
 
+**DISCLAIMER:** This example deploys a Collector for a testing and developing environment. In a production environment, the Collector should be deployed and configured as a [DaemonSet](https://opentelemetry.io/docs/kubernetes/getting-started/#daemonset-collector) as explained in the docs.
+
 Assuming [Helm](https://helm.sh/docs/intro/install/) is already installed in your current deployment, download and install the `cert-manager` dependencies:
 
 ```bash
@@ -193,7 +195,154 @@ $ kubectl apply -f simplest.yaml
 
 To configure the different resources, please refer to the [official documentation](https://www.jaegertracing.io/docs/1.60/operator/#configuring-the-custom-resource). This test uses all of the default settings from the All-in-one installation.
 
+# Prometheus
+
+[Prometheus](https://prometheus.io/) is an open-source observability backend especialized in scraping and monitoring metrics, as well as an alerting toolkit. It collects and stores metrics as sets of key-value pairs with timestamps from the time they were captures.
+
+## Deployment
+
+To begin with, we'll create a new namespace where our Prometheus instance will run in:
+
+```bash
+$ kubectl create ns prometheus
+```
+
+With the namespace created, you can deploy the operator in your cluster via a Deployment. The permissions of which can be configured via a ClusterRole for security purposes.
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: prometheus
+  labels:
+    app: prometheus-k8s
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus-k8s
+  template:
+    metadata:
+      labels:
+        app: prometheus-k8s
+    spec:
+      containers:
+        - name: prometheus
+          image: quay.io/prometheus/prometheus
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--storage.tsdb.retention.time=24h"
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus/"
+          ports:
+            - containerPort: 9090
+          resources:
+            requests:
+              cpu: 500m
+              memory: 500M
+            limits:
+              cpu: 1
+              memory: 1Gi
+          volumeMounts:
+            - name: prometheus-config-volume
+              mountPath: /etc/prometheus/
+            - name: prometheus-storage-volume
+              mountPath: /prometheus/
+      volumes:
+        - name: prometheus-config-volume
+          configMap:
+            defaultMode: 420
+            name: prometheus-config
+  
+        - name: prometheus-storage-volume
+          emptyDir: {}
+```
+
+## Configuration
+
+### Job configuration
+
+By default, the Prometheus operator will **not** start scraping metrics until we specify which jobs it needs to take care of. You need to explicitly state which endpoint it wants to scrape, as well as configure the job. The operator can handle multiple incoming jobs, as well as setting both global and job-scoped configurations.
+
+For this simple demostration, we'll create a new job in the Deployment's volumes to start actively scraping its given endpoint:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  labels:
+    name: prometheus-k8s-conf
+  namespace: prometheus
+data:
+  prometheus.yml: |-
+    global:
+      scrape_interval: 10s
+    scrape_configs:
+    - job_name: 'sample-job'
+      static_configs:
+      - targets: ['demo-collector.default.svc.cluster.local:9090']
+```
+
+### Exposing the GUI Service
+
+To access Prometheus' built in graphical user interface, we'll have to expose it via a service. This will let you observe and manage all of the metrics that Prometheus scrapes, as well as querying the results with [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics/) — a built-in querying language to filter and visualize metrics.
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-service
+  namespace: prometheus
+  annotations:
+      prometheus.io/scrape: 'true'
+      prometheus.io/port:   '9090'
+spec:
+  type: NodePort
+  ports:
+    - port: 9090
+      targetPort: 9090 
+```
+
+### Scraping Service
+
+We now have to deploy the Service in charge of routing the metrics from our OpenTelemetry Collector exporter to Prometheus. Once the link is established, Prometheus will start actively scraping for metrics following the parameters and configuration specified on its job.
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-service-scrape
+  namespace: prometheus
+spec:
+  ports:
+  - name: otlp-grpc
+    port: 4317
+    protocol: TCP
+    targetPort: 4317
+  - name: metrics
+    port: 9090
+    protocol: TCP
+    targetPort: 9090
+  selector:
+    app.kubernetes.io/name: opentelemetrycollector
+  type: ClusterIP
+```
+
+It is important to set the selector so the Service properly binds with our deployment. Otherwise the endpoints will become unreacheable.
+
+# Kibana
+
+
+
+## Deployment
+
+## Configuration
+
 # Information and documentation
 
 - [OpenTelemetry k8s docs](https://opentelemetry.io/docs/kubernetes/)
 - [OpenTelemetry Operator API](https://github.com/open-telemetry/opentelemetry-operator/blob/main/docs/api.md)
+- [Jaeger k8s deployment](https://www.jaegertracing.io/docs/1.60/deployment/)
+- [Deployment of an OpenTelemetry Collector with Prometheus support](https://medium.com/@tathagatapaul7/opentelemetry-in-kubernetes-deploying-your-collector-and-metrics-backend-b8ec86ac4a43)
