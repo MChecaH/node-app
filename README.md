@@ -334,9 +334,65 @@ It is important to set the selector so the Service properly binds with our deplo
 
 # Kibana
 
+[Kibana](https://www.elastic.co/kibana) offers visualization, management, and monitoring solutions for your application. It is deeply integrated with the Elastic Stack, provided by [Elasticsearch](https://www.elastic.co/elasticsearch). It is a proprietary solution for applications reliant on being provided with Elasticsearch data.
 
+Because of how deeply integrated it is with the Elastic Stack, a full deployment of the Elastic Cloud on Kubernetes (ECK) is needed. If your application already has an Operator and an Elasticsearch instance running, please go to [Deploying Kibana](#deploying-kibana).
 
 ## Deployment
+
+### Deploying the ECK Operator
+
+To begin with, you must install the full set of Custom Resource Definitions (CRD) provided by Elastic:
+
+```bash
+$ kubectl create -f https://download.elastic.co/downloads/eck/2.14.0/crds.yaml
+```
+
+Once the CRDs have been created, we can then deploy the Operator, including its RBAC rules:
+
+```bash
+$ kubectl apply -f https://download.elastic.co/downloads/eck/2.14.0/operator.yaml
+```
+
+### Deploying an Elasticsearch node
+
+*See also; [Manage compute resources](https://www.elastic.co/guide/en/cloud-on-k8s/current/k8s-managing-compute-resources.html)*
+
+**NOTE:** [By default](https://www.elastic.co/guide/en/cloud-on-k8s/current/k8s-managing-compute-resources.html#k8s-default-behavior), an Elasticsearch node requires a node with at least 2 GiB of free memory. This will be configured in the example below, but if the node cannot provide the memory, the Pod will be stuck in a Pending state.
+
+Next, you'll need to deploy an Elasticsearch node. This will be the database and data provider that Kibana will consume from.
+
+```yaml
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: quickstart
+spec:
+  version: 8.15.0
+  nodeSets:
+  - name: default
+    count: 1
+    config:
+      node.store.allow_mmap: false
+    podTemplate:
+      spec:
+        containers:
+        - name: elasticsearch
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 2
+            limits:
+              memory: 512Mi
+```
+
+By default, an user named `elastic` will store the password to the service in a secret. To request access to the node, we must first get the credentials.
+
+```bash
+$ PASSWORD=$(kubectl get secret quickstart-es-elastic-user -o go-template='{{.data.elastic | base64decode}}')
+```
+
+### Deploying Kibana
 
 ## Configuration
 
@@ -344,5 +400,6 @@ It is important to set the selector so the Service properly binds with our deplo
 
 - [OpenTelemetry k8s docs](https://opentelemetry.io/docs/kubernetes/)
 - [OpenTelemetry Operator API](https://github.com/open-telemetry/opentelemetry-operator/blob/main/docs/api.md)
-- [Jaeger k8s deployment](https://www.jaegertracing.io/docs/1.60/deployment/)
+- [Jaeger k8s docs](https://www.jaegertracing.io/docs/1.60/deployment/)
 - [Deployment of an OpenTelemetry Collector with Prometheus support](https://medium.com/@tathagatapaul7/opentelemetry-in-kubernetes-deploying-your-collector-and-metrics-backend-b8ec86ac4a43)
+- [Elastic Stack k8s docs](https://www.elastic.co/guide/en/cloud-on-k8s/current/k8s-quickstart.html)
