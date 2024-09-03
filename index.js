@@ -25,29 +25,21 @@ app.get("/reviews", (req, res) => {
 });
 
 app.get("/ratings", (req, res) => {
+	console.log(`USD: ${USD} \nEUR: ${EUR} \nGBP: ${GBP}`);
 	res.sendFile(path.join(__dirname, "/public/ratings.html"));
 });
 
 // Request handler
 let loginKey = null;
+let USD, GBP, EUR;
 app.post("/", (req, res) => {
 	// DEBUG CONNECTION
-	console.log("Incoming connection from: " + req.ip + ":" + req.port);
-	console.log("With contents: " + req.body.key);
+	console.log("Incoming connection from: " + req.headers.host);
+	console.log("With contents: " + JSON.stringify(req.body));
 
-	// Set the current session key to the first request
-	if (loginKey === null) {
-		loginKey = req.body.key;
-		res.redirect("http://localhost:3000/");
-	}
-
-	// Route to Reviews / Ratings
-	if (req.body.action === "reviews" && loginKey === "key1")
-		res.redirect("/reviews");
-	else if (
-		req.body.action === "ratings" &&
-		(loginKey === "key1" || loginKey === "key2")
-	)
-		res.redirect("/ratings");
-	else res.sendStatus(401);
+	USD = req.body.USD;
+	GBP = req.body.GBP;
+	EUR = req.body.EUR;
+	loginKey = req.body.key;
+	res.redirect("http://localhost:3000/");
 });

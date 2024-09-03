@@ -7,13 +7,17 @@
 	</head>
 	<body>
 		<h1>Root route</h1>
-		<form action="http://localhost:3000/" method="post">
+		<form action="/" method="get">
 			<label>Choose route:</label>
 			<div
 				style="display: flex; flex-direction: row; align-content: flex-start"
 			>
-				<button type="submit" name="action" value="reviews">Reviews</button>
-				<button type="submit" name="action" value="ratings">Ratings</button>
+				<button formaction="/reviews" type="submit" name="action">
+					Reviews
+				</button>
+				<button formaction="/ratings" type="submit" name="action">
+					Ratings
+				</button>
 			</div>
 		</form>
 	</body>
