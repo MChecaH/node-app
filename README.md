@@ -6,7 +6,31 @@ These backends are, but not limited to:
 
 - [**Jaeger**](https://www.jaegertracing.io/) - [Deployment guide](#jaeger)
 - [**Prometheus**](https://prometheus.io/) - [Deployment guide](#prometheus)
-- [**Kibana**](https://www.elastic.co/kibana)
+- [**Kibana**](https://www.elastic.co/kibana) - [Deployment guide](#kibana) (WIP)
+
+# Index
+
+- [**OpenTelemetry**](#opentelemetry)
+  - [OpenTelemetry Collector](#opentelemetry-collector)
+  - [Deployment](#deployment)
+  - [Configuration](#configuration)
+    - [OpenTelemetryCollector](#opentelemetrycollector)
+      - [Extra configuration](#extra-configuration)
+    - [Instrumentation](#instrumentation)
+    - [Choosing which deployments to auto-instrument](#choosing-which-deployments-to-auto-instrument)
+- [**Jaeger**](#jaeger)
+  - [Deployment](#deployment-1)
+  - [Configuration](#configuration-1)
+- [**Prometheus**](#prometheus)
+  - [Deployment](#deployment-2)
+  - [Configuration](#configuration-2)
+- [**Kibana**](#kibana) (WIP)
+  - [Deployment](#deployment-3)
+    - [Deploying the ECK Operator](#deploying-the-eck-operator)
+    - [Deploying an ElasticSearch node](#deploying-an-elasticsearch-node)
+    - [Deploying Kibana](#deploying-kibana)
+  - [Configuration](#configuration-3)
+- [**Sources**](#sources)
 
 # OpenTelemetry
 
@@ -133,8 +157,11 @@ metadata:
   name: demo-instrumentation
   namespace: node-app
 spec:
+  # Auto-instrumentation is only supported for Go, .NET, PHP, Python, Java, and JavaScrip
   nodejs:
     image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-nodejs:latest
+
+  # This exports the telemetry data to the previously configured Collector
   exporter:
     endpoint: http://demo-collector.default.svc.cluster.local:4317
   propagators:
@@ -416,7 +443,9 @@ $ PASSWORD=$(kubectl get secret quickstart-es-elastic-user -o go-template='{{.da
 
 ## Configuration
 
-# Information and documentation
+# Sources
+
+These are the main sources of information that have been used while learning to auto-instrument this application. They have also been used to write and summarize this walkthrough. This example is **not production ready**, this is only for development and testing purposes. More information on how to set it up properly in that environment should be read on the documentation below:
 
 - [OpenTelemetry k8s docs](https://opentelemetry.io/docs/kubernetes/)
 - [OpenTelemetry Operator API](https://github.com/open-telemetry/opentelemetry-operator/blob/main/docs/api.md)
